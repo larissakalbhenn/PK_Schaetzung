@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIAMIR – KI-Schätzung</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0c0c0c;
+  --surface: #141414;
+  --border: #1e1e1e;
+  --border-mid: #2a2a2a;
+  --text: #e8e4dc;
+  --text-dim: #888;
+  --text-faint: #444;
+  --accent: #c87d4a;
+  --accent-dim: #7a4d2e;
+  --gold: #d4b896;
+  --blue: #6b9eb5;
+  --green: #8fad6b;
+  --purple: #b57ab5;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ─── LAYOUT ─── */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left { display: flex; align-items: baseline; gap: 16px; }
+
+.logo {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.header-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+.ai-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.header-actions { display: flex; gap: 8px; }
+
+/* ─── MAIN PANELS ─── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+.left-panel {
+  width: 360px;
+  min-width: 360px;
+  border-right: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.right-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+}
+
+/* ─── LEFT PANEL ─── */
+.panel-section {
+  padding: 20px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.panel-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+
+/* Project meta */
+.meta-field { margin-bottom: 14px; }
+.meta-field:last-child { margin-bottom: 0; }
+
+.meta-field label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 5px;
+}
+
+.meta-field input, .meta-field select {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--border-mid);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 0;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.meta-field input:focus,
+.meta-field select:focus { border-bottom-color: var(--text-faint); }
+
+.meta-field input::placeholder { color: var(--text-faint); }
+
+.meta-field select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23444'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+}
+
+.meta-field select option { background: #1a1a1a; }
+
+/* Scope textarea */
+.scope-area {
+  width: 100%;
+  background: #0f0f0f;
+  border: 0.5px solid var(--border-mid);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px;
+  resize: vertical;
+  min-height: 140px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.scope-area:focus { border-color: var(--text-faint); }
+.scope-area::placeholder { color: var(--text-faint); }
+
+/* Checkboxes */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cb-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.cb-item:hover { background: var(--border); }
+
+.cb-item input[type=checkbox] { display: none; }
+
+.cb-box {
+  width: 14px; height: 14px;
+  border: 0.5px solid var(--border-mid);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.cb-item input:checked ~ .cb-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.cb-check {
+  font-size: 9px;
+  color: #fff;
+  display: none;
+}
+
+.cb-item input:checked ~ .cb-box .cb-check { display: block; }
+
+.cb-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* AI Generate button */
+.generate-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.generate-btn:hover { background: #d4895a; }
+.generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.generate-btn .btn-icon { font-size: 15px; }
+
+/* Spinner */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* PM slider */
+.pm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.pm-row label { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+
+.pm-row input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--border-mid);
+  border-radius: 1px;
+  outline: none;
+}
+
+.pm-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.pm-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--gold);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Summary totals */
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.total-row:last-child { border-bottom: none; }
+
+.total-label { font-size: 12px; color: var(--text-dim); }
+
+.total-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.total-value.grand {
+  font-size: 15px;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ─── RIGHT PANEL ─── */
+.right-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.right-panel-title {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.empty-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+
+.empty-title {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.empty-sub { font-size: 13px; line-height: 1.6; max-width: 320px; }
+
+/* AI thinking */
+.ai-thinking {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 20px;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.thinking-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-10px); opacity: 1; }
+}
+
+.thinking-text { font-size: 13px; color: var(--text-dim); }
+.thinking-sub { font-size: 12px; color: var(--text-faint); }
+
+/* Blocks */
+.blocks-container { display: flex; flex-direction: column; gap: 2px; }
+
+.block {
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.block-header {
+  display: grid;
+  grid-template-columns: 24px 180px 1fr 76px 76px 76px 28px;
+  align-items: center;
+  padding: 10px 14px;
+  background: #161616;
+  cursor: pointer;
+  user-select: none;
+  gap: 0;
+}
+
+.block-header:hover { background: #1a1a1a; }
+
+.block-toggle {
+  font-size: 9px;
+  color: var(--text-faint);
+  transition: transform 0.2s;
+}
+
+.block.open .block-toggle { transform: rotate(90deg); }
+
+.block-name-wrap { display: flex; align-items: center; gap: 8px; }
+
+.block-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.block-name-text {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #aaa;
+  outline: none;
+}
+
+.col-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.block-total {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  text-align: right;
+}
+
+.rows { display: none; }
+.block.open .rows { display: block; }
+
+.row {
+  display: grid;
+  grid-template-columns: 24px 180px 1fr 76px 76px 76px 28px;
+  align-items: start;
+  padding: 8px 14px;
+  border-top: 0.5px solid #1a1a1a;
+  gap: 0;
+  transition: background 0.15s;
+}
+
+.row:hover { background: #121212; }
+
+.row-num {
+  font-size: 10px;
+  color: #2e2e2e;
+  font-family: 'DM Mono', monospace;
+  padding-top: 3px;
+}
+
+.row-name input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #c8c4bc;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  padding: 2px 8px 2px 0;
+}
+
+.row-name input::placeholder { color: var(--border-mid); }
+
+.row-desc textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  padding: 3px 8px 2px 0;
+  resize: none;
+  line-height: 1.5;
+  min-height: 20px;
+  overflow: hidden;
+}
+
+.row-desc textarea:focus { color: #999; }
+.row-desc textarea::placeholder { color: #252525; }
+
+.pt-input {
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid transparent;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  text-align: right;
+  width: 100%;
+  padding: 2px 4px;
+  outline: none;
+  transition: border-color 0.2s;
+  -moz-appearance: textfield;
+  margin-top: 2px;
+}
+
+.pt-input::-webkit-outer-spin-button,
+.pt-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.pt-input:focus { border-bottom-color: var(--border-mid); }
+.pt-input.endwert { color: var(--gold); font-weight: 500; }
+
+.delete-row {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px;
+  transition: color 0.2s;
+  text-align: right;
+  padding-top: 3px;
+}
+
+.delete-row:hover { color: var(--text-dim); }
+
+.add-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 38px;
+  font-size: 12px;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-top: 0.5px solid #1a1a1a;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+
+.add-row-btn:hover { color: var(--text-dim); }
+
+.add-block-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  font-size: 12px;
+  color: var(--text-faint);
+  border: 0.5px dashed var(--border-mid);
+  border-radius: 4px;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: all 0.2s;
+}
+
+.add-block-btn:hover { color: var(--text-dim); border-color: var(--text-faint); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 0.5px solid var(--border-mid);
+  color: var(--text-dim);
+}
+
+.btn-ghost:hover { border-color: var(--text-faint); color: var(--text); }
+
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+}
+
+.btn-primary:hover { background: #d4895a; }
+
+/* AI notes banner */
+.ai-notes {
+  display: none;
+  background: #1a1208;
+  border: 0.5px solid #3d2a0a;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #c49a5a;
+  line-height: 1.6;
+}
+
+.ai-notes strong { color: var(--gold); }
+
+/* Questions overlay */
+.questions-panel {
+  display: none;
+  background: #0f110e;
+  border: 0.5px solid #2a3a1e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.questions-title {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+
+.question-item {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid #1e2a18;
+  font-size: 12px;
+  color: #9cb88c;
+  line-height: 1.5;
+}
+
+.question-item:last-child { border-bottom: none; }
+.question-item::before { content: "?"; color: var(--green); font-weight: 500; flex-shrink: 0; margin-top: 1px; }
+
+/* ─── AREA BLOCKS WITH SUB-CHECKS ─── */
+.area-block {
+  border-bottom: 0.5px solid var(--border);
+  padding: 2px 0;
+}
+.area-block:last-child { border-bottom: none; }
+
+.cb-parent { padding: 7px 6px; }
+
+.cb-label-parent {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.sub-checks {
+  padding: 0 0 6px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cb-sub { padding: 4px 6px; }
+.cb-sub .cb-label { font-size: 11px; color: var(--text-faint); }
+.cb-sub .cb-box { width: 12px; height: 12px; }
+
+.sub-sub-checks {
+  padding: 2px 0 4px 22px;
+}
+
+.interview-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+}
+
+.counter-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.counter-control button {
+  background: var(--border);
+  border: none;
+  color: var(--text-dim);
+  width: 20px; height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.counter-control button:hover { background: var(--border-mid); color: var(--text); }
+
+.counter-control span {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--gold);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ─── PDF UPLOAD ─── */
+.pdf-drop-zone {
+  border: 0.5px dashed var(--border-mid);
+  border-radius: 6px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  margin-top: 8px;
+}
+
+.pdf-drop-zone:hover,
+.pdf-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(200, 125, 74, 0.05);
+}
+
+.pdf-drop-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-drop-icon { font-size: 20px; margin-bottom: 6px; opacity: 0.5; }
+
+.pdf-drop-label {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.pdf-drop-label span { color: var(--accent); }
+
+.pdf-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.pdf-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1208;
+  border: 0.5px solid #3d2a0a;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #c49a5a;
+  gap: 8px;
+}
+
+.pdf-file-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdf-file-pages {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pdf-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.pdf-file-remove:hover { color: var(--text-dim); }
+
+.pdf-loading {
+  display: none;
+  font-size: 11px;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 8px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
+
+/* Print */
+@media print {
+  .left-panel, .header-actions, .add-block-btn, .add-row-btn, .delete-row { display: none !important; }
+  .main { display: block; }
+  .right-panel { padding: 0; }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="header-left">
+    <span class="logo">DIAMIR</span>
+    <div class="header-badge">
+      <div class="ai-dot"></div>
+      <span>KI-Schätzung</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="exportCSV()">CSV</button>
+    <button class="btn btn-ghost" onclick="window.print()">PDF</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <div class="panel-section">
+      <div class="panel-label">Projektinfo</div>
+      <div class="meta-field">
+        <label>Projekt</label>
+        <input type="text" id="meta-projekt" placeholder="z. B. Brokerportal Redesign">
+      </div>
+      <div class="meta-field">
+        <label>Kunde</label>
+        <input type="text" id="meta-kunde" placeholder="Kundenname">
+      </div>
+      <div class="meta-field">
+        <label>Datum</label>
+        <input type="text" id="meta-datum">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Projektbeschreibung</div>
+      <textarea class="scope-area" id="scope-input" placeholder="Beschreib das Projekt kurz: Was soll entstehen? Für wen? Welche Features / Screens? Welche Plattformen? Gibt es ein bestehendes Design System? Usability Tests gewünscht?&#10;&#10;Beispiel: Responsive Web-App für Versicherungsbroker, ~30 Screens, kein bestehendes Design System, mit UX + UI, Usability Testing mit 5 Nutzern, WCAG AA…"></textarea>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Lastenheft / Dokumente <span style="color:var(--text-faint);font-size:10px;letter-spacing:0;text-transform:none;font-weight:400">optional</span></div>
+      <div class="pdf-drop-zone" id="pdf-drop-zone">
+        <input type="file" id="pdf-input" accept=".pdf" multiple>
+        <div class="pdf-drop-icon">📄</div>
+        <div class="pdf-drop-label">PDF(s) hier ablegen oder <span>auswählen</span><br>Lastenhefte, Briefs, Anforderungsdokumente</div>
+      </div>
+      <div class="pdf-loading" id="pdf-loading">⏳ Lese PDFs…</div>
+      <div class="pdf-files-list" id="pdf-files-list"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Leistungsbereiche</div>
+
+      <!-- Requirements -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-re" checked onchange="toggleSubs('re', this.checked)">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">Requirements Engineering</span>
+        </label>
+        <div class="sub-checks" id="subs-re">
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-re-istanalyse" checked>
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Ist-Analyse & Prozesse</span>
+          </label>
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-re-research">
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Research & Wettbewerb</span>
+          </label>
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-re-interviews" checked>
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Interviews inkl. Planung</span>
+          </label>
+          <div class="sub-sub-checks" id="subs-re-interviews">
+            <div class="interview-count-row">
+              <span class="cb-label" style="color:var(--text-faint);font-size:11px">Anzahl Interviews</span>
+              <div class="counter-control">
+                <button type="button" onclick="changeCount('interview-count', -1)">−</button>
+                <span id="interview-count-display">6</span>
+                <button type="button" onclick="changeCount('interview-count', 1)">+</button>
+                <input type="hidden" id="interview-count" value="6">
+              </div>
+            </div>
+          </div>
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-re-techbegleitung">
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Technische Begleitung</span>
+          </label>
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-re-funktionskonzept" checked>
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Funktions- & Rollenkonzept</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- UX -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-ux" checked>
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">UX Design</span>
+        </label>
+      </div>
+
+      <!-- UI -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-ui" checked>
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">UI Design</span>
+        </label>
+      </div>
+
+      <!-- Design System -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-ds" onchange="toggleSubs('ds', this.checked)">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">Design System</span>
+        </label>
+        <div class="sub-checks" id="subs-ds" style="display:none">
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-ds-simpel" checked name="ds-scope" onchange="dsRadio('simpel')">
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Simpel <span style="color:var(--text-faint);font-size:11px">Foundations + Komponenten</span></span>
+          </label>
+          <label class="cb-item cb-sub">
+            <input type="checkbox" id="cb-ds-tokens" name="ds-scope" onchange="dsRadio('tokens')">
+            <span class="cb-box"><span class="cb-check">✓</span></span>
+            <span class="cb-label">Mit Tokens <span style="color:var(--text-faint);font-size:11px">inkl. Token-Architektur & Übergabe</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Usability Testing -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-ut" checked onchange="toggleSubs('ut', this.checked)">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">Usability Testing</span>
+        </label>
+        <div class="sub-checks" id="subs-ut">
+          <div class="interview-count-row">
+            <span class="cb-label" style="color:var(--text-faint);font-size:11px">Anzahl Testpersonen</span>
+            <div class="counter-control">
+              <button type="button" onclick="changeCount('ut-count', -1)">−</button>
+              <span id="ut-count-display">5</span>
+              <button type="button" onclick="changeCount('ut-count', 1)">+</button>
+              <input type="hidden" id="ut-count" value="5">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accessibility -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-acc">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">Accessibility</span>
+        </label>
+      </div>
+
+      <!-- Architektur -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-arch">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">Software Architektur</span>
+        </label>
+      </div>
+
+      <!-- AI -->
+      <div class="area-block">
+        <label class="cb-item cb-parent">
+          <input type="checkbox" id="cb-ai">
+          <span class="cb-box"><span class="cb-check">✓</span></span>
+          <span class="cb-label cb-label-parent">AI Konzeption</span>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="panel-section">
+      <button class="generate-btn" id="generate-btn" onclick="generateEstimate()">
+        <span class="btn-icon" id="btn-icon">✦</span>
+        <div class="spinner" id="btn-spinner"></div>
+        <span id="btn-label">KI-Schätzung generieren</span>
+      </button>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">PM-Anteil</div>
+      <div class="pm-row">
+        <label>Satz</label>
+        <input type="range" min="0" max="50" value="30" id="pm-slider" oninput="updatePM(this.value)">
+        <span class="pm-val" id="pm-display">30%</span>
+      </div>
+    </div>
+
+    <div class="panel-section" style="flex:1">
+      <div class="panel-label">Zusammenfassung</div>
+      <div class="total-row">
+        <span class="total-label">Netto</span>
+        <span class="total-value" id="total-netto">— PT</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">PM-Anteil</span>
+        <span class="total-value" id="total-pm">— PT</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Gesamt inkl. PM</span>
+        <span class="total-value grand" id="total-gesamt">— PT</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <div class="right-panel-header">
+      <span class="right-panel-title" id="panel-title">Schätzung</span>
+      <div style="display:flex;gap:8px" id="table-actions" style="display:none">
+        <button class="btn btn-ghost" onclick="resetBlocks()" id="reset-btn" style="display:none">Zurücksetzen</button>
+      </div>
+    </div>
+
+    <!-- AI questions -->
+    <div class="questions-panel" id="questions-panel"></div>
+
+    <!-- AI notes -->
+    <div class="ai-notes" id="ai-notes"></div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">✦</div>
+      <div class="empty-title">Bereit zur Schätzung</div>
+      <div class="empty-sub">Beschreib das Projekt links, wähle die Leistungsbereiche aus – und die KI generiert eine vollständige, editierbare Schätzung nach DIAMIR-Standard.</div>
+    </div>
+
+    <!-- AI thinking -->
+    <div class="ai-thinking" id="ai-thinking">
+      <div class="thinking-dots">
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+      </div>
+      <div class="thinking-text">KI analysiert Projektbeschreibung…</div>
+      <div class="thinking-sub" id="thinking-sub">Gleich geht's los</div>
+    </div>
+
+    <!-- Blocks -->
+    <div class="blocks-container" id="blocks"></div>
+
+    <button class="add-block-btn" id="add-block-btn" onclick="addBlock()" style="display:none">
+      + Feature Block hinzufügen
+    </button>
+
+  </div>
+</div>
+</div>
+
+<script>
+const COLORS = ['#c87d4a','#6b9eb5','#8fad6b','#b57ab5','#b5956b','#6b9e9e','#c87d7d','#7d9ec8'];
+let pmRate = 0.30;
+let blockCount = 0;
+let hasBlocks = false;
+
+// ─── DATE ───
+const today = new Date();
+document.getElementById('meta-datum').value =
+  String(today.getDate()).padStart(2,'0') + '.' +
+  String(today.getMonth()+1).padStart(2,'0') + '.' +
+  today.getFullYear();
+
+// ─── PM ───
+function updatePM(val) {
+  pmRate = val / 100;
+  document.getElementById('pm-display').textContent = val + '%';
+  calcTotals();
+}
+
+// ─── FORMAT ───
+function fmt(val) {
+  if (isNaN(val)) return '— PT';
+  return val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PT';
+}
+
+// ─── CALC ───
+function calcBlock(id) {
+  const block = document.getElementById('block-' + id);
+  if (!block) return;
+  let total = 0;
+  block.querySelectorAll('.row').forEach(row => {
+    const v = parseFloat(row.querySelector('.pt-input.endwert').value) || 0;
+    total += v;
+  });
+  block.querySelector('.block-total').textContent = fmt(total);
+  calcTotals();
+}
+
+function calcTotals() {
+  let netto = 0;
+  document.querySelectorAll('.block-total').forEach(el => {
+    const v = parseFloat(el.textContent.replace(',', '.').replace(' PT', '')) || 0;
+    netto += v;
+  });
+  if (netto === 0 && !hasBlocks) {
+    document.getElementById('total-netto').textContent = '— PT';
+    document.getElementById('total-pm').textContent = '— PT';
+    document.getElementById('total-gesamt').textContent = '— PT';
+    return;
+  }
+  const pm = netto * pmRate;
+  const gesamt = netto + pm;
+  document.getElementById('total-netto').textContent = fmt(netto);
+  document.getElementById('total-pm').textContent = fmt(pm);
+  document.getElementById('total-gesamt').textContent = fmt(gesamt);
+}
+
+function autoEnd(rowEl) {
+  const min = parseFloat(rowEl.querySelector('.pt-input.min').value) || 0;
+  const max = parseFloat(rowEl.querySelector('.pt-input.max').value) || 0;
+  const endEl = rowEl.querySelector('.pt-input.endwert');
+  if (min > 0 || max > 0) {
+    const avg = (min + max) / 2;
+    endEl.value = Number.isInteger(avg) ? avg : parseFloat(avg.toFixed(2));
+  }
+}
+
+// ─── ROW ───
+function makeRow(blockId, data = {}) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const idx = document.getElementById('block-' + blockId).querySelectorAll('.row').length + 1;
+  row.innerHTML = `
+    <span class="row-num" style="padding-top:3px">${String(idx).padStart(2,'0')}</span>
+    <div class="row-name"><input type="text" placeholder="Subfeature…" value="${(data.name || '').replace(/"/g,'&quot;')}"></div>
+    <div class="row-desc"><textarea placeholder="Scope-Abgrenzung…" rows="1">${data.desc || ''}</textarea></div>
+    <input class="pt-input min" type="number" step="0.25" placeholder="–" value="${data.min || ''}">
+    <input class="pt-input max" type="number" step="0.25" placeholder="–" value="${data.max || ''}">
+    <input class="pt-input endwert" type="number" step="0.25" placeholder="–" value="${data.end || ''}">
+    <button class="delete-row" title="Löschen">×</button>
+  `;
+  const ta = row.querySelector('textarea');
+  const autoHeight = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  ta.addEventListener('input', autoHeight);
+  if (data.desc) setTimeout(autoHeight, 0);
+  row.querySelector('.delete-row').onclick = () => { row.remove(); calcBlock(blockId); };
+  row.querySelectorAll('.pt-input.min, .pt-input.max').forEach(inp => {
+    inp.addEventListener('change', () => { autoEnd(row); calcBlock(blockId); });
+  });
+  row.querySelector('.pt-input.endwert').addEventListener('input', () => calcBlock(blockId));
+  return row;
+}
+
+// ─── BLOCK ───
+function addBlock(data = null) {
+  const id = ++blockCount;
+  const color = COLORS[(id - 1) % COLORS.length];
+  const block = document.createElement('div');
+  block.className = 'block open';
+  block.id = 'block-' + id;
+  block.innerHTML = `
+    <div class="block-header" onclick="toggleBlock(${id})">
+      <span class="block-toggle">▶</span>
+      <div class="block-name-wrap">
+        <div class="block-dot" style="background:${color}"></div>
+        <span class="block-name-text" contenteditable="true" onclick="event.stopPropagation()" spellcheck="false">${data ? data.name : 'Neuer Block'}</span>
+      </div>
+      <span class="col-label" style="text-align:left;padding-left:4px">Beschreibung</span>
+      <span class="col-label">Min</span>
+      <span class="col-label">Max</span>
+      <span class="col-label">Endwert</span>
+      <span class="block-total">0,00 PT</span>
+    </div>
+    <div class="rows"></div>
+    <button class="add-row-btn" onclick="addRowToBlock(${id})">+ Subfeature hinzufügen</button>
+  `;
+  document.getElementById('blocks').appendChild(block);
+  if (data && data.rows) {
+    data.rows.forEach(r => block.querySelector('.rows').appendChild(makeRow(id, r)));
+  }
+  calcBlock(id);
+  return block;
+}
+
+function addRowToBlock(id) {
+  const rowEl = makeRow(id);
+  document.getElementById('block-' + id).querySelector('.rows').appendChild(rowEl);
+  rowEl.querySelector('input[type=text]').focus();
+}
+
+function toggleBlock(id) {
+  document.getElementById('block-' + id).classList.toggle('open');
+}
+
+// ─── RESET ───
+function resetBlocks() {
+  document.getElementById('blocks').innerHTML = '';
+  blockCount = 0;
+  hasBlocks = false;
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('add-block-btn').style.display = 'none';
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('ai-notes').style.display = 'none';
+  document.getElementById('questions-panel').style.display = 'none';
+  calcTotals();
+}
+
+// ─── SHOW BLOCKS ───
+function showBlocks(blocks, notes, questions) {
+  // Hide states
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('ai-thinking').style.display = 'none';
+
+  // Questions
+  const qPanel = document.getElementById('questions-panel');
+  if (questions && questions.length) {
+    qPanel.style.display = 'block';
+    qPanel.innerHTML = `<div class="questions-title">⚠ Offene Klärungsfragen</div>` +
+      questions.map(q => `<div class="question-item">${q}</div>`).join('');
+  }
+
+  // Notes
+  const notesEl = document.getElementById('ai-notes');
+  if (notes) {
+    notesEl.style.display = 'block';
+    notesEl.innerHTML = `<strong>KI-Hinweise:</strong> ${notes}`;
+  }
+
+  // Build blocks
+  document.getElementById('blocks').innerHTML = '';
+  blockCount = 0;
+  blocks.forEach(b => addBlock(b));
+  hasBlocks = true;
+
+  document.getElementById('add-block-btn').style.display = 'flex';
+  document.getElementById('reset-btn').style.display = 'inline-flex';
+  calcTotals();
+}
+
+// ─── PDF HANDLING ───
+let uploadedPDFs = []; // [{name, base64, pageCount}]
+
+function setupPDFDrop() {
+  const zone = document.getElementById('pdf-drop-zone');
+  const input = document.getElementById('pdf-input');
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    handlePDFFiles([...e.dataTransfer.files].filter(f => f.type === 'application/pdf'));
+  });
+
+  input.addEventListener('change', () => {
+    handlePDFFiles([...input.files]);
+    input.value = ''; // reset so same file can be re-added
+  });
+}
+
+async function handlePDFFiles(files) {
+  if (!files.length) return;
+  const loading = document.getElementById('pdf-loading');
+  loading.style.display = 'block';
+
+  for (const file of files) {
+    try {
+      const base64 = await fileToBase64(file);
+      // Estimate page count from file size (~50KB/page rough heuristic, capped display)
+      const pageEst = Math.max(1, Math.round(file.size / 51200));
+      uploadedPDFs.push({ name: file.name, base64, pageEst });
+      renderPDFList();
+    } catch (e) {
+      console.error('PDF read error:', e);
+    }
+  }
+
+  loading.style.display = 'none';
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function removePDF(idx) {
+  uploadedPDFs.splice(idx, 1);
+  renderPDFList();
+}
+
+function renderPDFList() {
+  const list = document.getElementById('pdf-files-list');
+  if (!uploadedPDFs.length) { list.innerHTML = ''; return; }
+  list.innerHTML = uploadedPDFs.map((p, i) => `
+    <div class="pdf-file-item">
+      <span class="pdf-file-name" title="${p.name}">📄 ${p.name}</span>
+      <span class="pdf-file-pages">~${p.pageEst}S.</span>
+      <button class="pdf-file-remove" onclick="removePDF(${i})" title="Entfernen">×</button>
+    </div>
+  `).join('');
+}
+
+// ─── SUB-CHECKBOX HELPERS ───
+function toggleSubs(area, checked) {
+  const subs = document.getElementById('subs-' + area);
+  if (subs) subs.style.display = checked ? 'flex' : 'none';
+  // also toggle interview sub-sub
+  if (area === 're') {
+    const intSubs = document.getElementById('subs-re-interviews');
+    if (intSubs) {
+      const interviewCb = document.getElementById('cb-re-interviews');
+      intSubs.style.display = (checked && interviewCb && interviewCb.checked) ? 'block' : 'none';
+    }
+  }
+}
+
+// Show/hide interview count when interviews checkbox toggled
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cb-re-interviews').addEventListener('change', function() {
+    const sub = document.getElementById('subs-re-interviews');
+    if (sub) sub.style.display = this.checked ? 'block' : 'none';
+  });
+});
+
+function dsRadio(chosen) {
+  // behave like radio but keep both as checkboxes visually
+  if (chosen === 'simpel') document.getElementById('cb-ds-tokens').checked = false;
+  if (chosen === 'tokens') document.getElementById('cb-ds-simpel').checked = false;
+}
+
+function changeCount(id, delta) {
+  const input = document.getElementById(id);
+  const display = document.getElementById(id + '-display');
+  let val = parseInt(input.value) + delta;
+  val = Math.max(1, Math.min(30, val));
+  input.value = val;
+  display.textContent = val;
+}
+
+// ─── AI GENERATE ───
+async function generateEstimate() {
+  const scope = document.getElementById('scope-input').value.trim();
+  const hasPDFs = uploadedPDFs.length > 0;
+
+  if (!scope && !hasPDFs) {
+    document.getElementById('scope-input').focus();
+    document.getElementById('scope-input').style.borderColor = '#c87d4a';
+    setTimeout(() => document.getElementById('scope-input').style.borderColor = '', 2000);
+    return;
+  }
+
+  const checks = {
+    re:   document.getElementById('cb-re').checked,
+    ux:   document.getElementById('cb-ux').checked,
+    ui:   document.getElementById('cb-ui').checked,
+    ds:   document.getElementById('cb-ds').checked,
+    ut:   document.getElementById('cb-ut').checked,
+    acc:  document.getElementById('cb-acc').checked,
+    arch: document.getElementById('cb-arch').checked,
+    ai:   document.getElementById('cb-ai').checked,
+  };
+  const selected = Object.entries(checks).filter(([,v]) => v).map(([k]) => k);
+
+  // UI: loading
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  document.getElementById('btn-icon').style.display = 'none';
+  document.getElementById('btn-spinner').style.display = 'block';
+  document.getElementById('btn-label').textContent = 'Generiere…';
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('ai-notes').style.display = 'none';
+  document.getElementById('questions-panel').style.display = 'none';
+  document.getElementById('blocks').innerHTML = '';
+  blockCount = 0;
+  hasBlocks = false;
+
+  const thinking = document.getElementById('ai-thinking');
+  thinking.style.display = 'flex';
+  const messages = hasPDFs
+    ? ['Lese Dokumente…', 'Analysiere Anforderungen aus PDFs…', 'Schätze Aufwände nach DIAMIR-Standard…', 'Fast fertig…']
+    : ['Analysiere Projektbeschreibung…', 'Schätze Aufwände nach DIAMIR-Standard…', 'Erstelle Subfeatures und Beschreibungen…', 'Fast fertig…'];
+  let mi = 0;
+  const thinkInterval = setInterval(() => {
+    mi = (mi + 1) % messages.length;
+    document.getElementById('thinking-sub').textContent = messages[mi];
+  }, 2200);
+
+  // Build detailed scope description from sub-checkboxes
+  const reChecked = document.getElementById('cb-re').checked;
+  const reIstanalyse = reChecked && document.getElementById('cb-re-istanalyse').checked;
+  const reResearch = reChecked && document.getElementById('cb-re-research').checked;
+  const reInterviews = reChecked && document.getElementById('cb-re-interviews').checked;
+  const interviewCount = parseInt(document.getElementById('interview-count').value) || 6;
+  const reTechbegleitung = reChecked && document.getElementById('cb-re-techbegleitung').checked;
+  const reFunktionskonzept = reChecked && document.getElementById('cb-re-funktionskonzept').checked;
+
+  const dsChecked = document.getElementById('cb-ds').checked;
+  const dsTokens = dsChecked && document.getElementById('cb-ds-tokens').checked;
+  const dsSimpel = dsChecked && document.getElementById('cb-ds-simpel').checked;
+
+  const utChecked = document.getElementById('cb-ut').checked;
+  const utCount = parseInt(document.getElementById('ut-count').value) || 5;
+
+  const areaLines = [];
+
+  if (reChecked) {
+    const reSubs = [];
+    if (reIstanalyse) reSubs.push('Ist-Analyse & Prozessaufarbeitung');
+    if (reResearch) reSubs.push('Research & Wettbewerbsanalyse');
+    if (reInterviews) reSubs.push(`User Interviews (${interviewCount} Interviews, je ~3h mit 2 PK-Personen inkl. Planung, Fragenkatalog, Goodies)`);
+    if (reTechbegleitung) reSubs.push('Technische Begleitung (Schnittstellen, IAM, Machbarkeitscheck)');
+    if (reFunktionskonzept) reSubs.push('Funktions- & Rollenkonzept, Anforderungszusammenfassung');
+    reSubs.push('Puffer');
+    areaLines.push(`Requirements Engineering:\n  - ${reSubs.join('\n  - ')}`);
+  }
+  if (document.getElementById('cb-ux').checked)
+    areaLines.push('UX Design: Wireframing, Wireflows, Konzept-Challenge, Kundenmeetings, Feedback einarbeiten, Übergabe, Puffer');
+  if (document.getElementById('cb-ui').checked)
+    areaLines.push('UI Design: Setup & CI-Komponenten, Screendesigns, Styleguide, Prototyp, Übergabe, Puffer');
+  if (dsChecked) {
+    if (dsTokens)
+      areaLines.push('Design System (VOLLSTÄNDIG mit Tokens): Foundations (Colors, Typography, Grid, Spacing, Shadows), Komponenten-Bibliothek, Token-Architektur, Token-Konzept & Erstellung, Format (JSON/Git), Übergabe & Abstimmung mit Entwicklung');
+    else
+      areaLines.push('Design System (SIMPEL): Foundations (Colors, Typography, Grid, Spacing) + Kern-Komponenten, OHNE Token-Architektur');
+  }
+  if (utChecked)
+    areaLines.push(`Usability Testing: Vorbereitung, Prototyp-Check, Durchführung (${utCount} Testpersonen, ~1,5h/Session mit 2 PK-Personen), Auswertung, Bericht, Goodies`);
+  if (document.getElementById('cb-acc').checked)
+    areaLines.push('Accessibility: WCAG-Anforderungen, Colour Contrast, Fokus-Reihenfolge, Screen Reader, Doku für Entwicklung');
+  if (document.getElementById('cb-arch').checked)
+    areaLines.push('Software Architektur: Systemlandschaft, Schnittstellenanalyse, IAM-Konzept, CMS-Auswahl, Architekturdiagramme');
+  if (document.getElementById('cb-ai').checked)
+    areaLines.push('AI Konzeption (4–8 PT Richtwert): Human-AI Interaction, Explainability & Trust-Design, Ethik & Compliance');
+
+  const selectedAreas = areaLines.join('\n\n');
+
+  const scopeSection = scope
+    ? `PROJEKTBESCHREIBUNG (manuell):\n${scope}\n`
+    : `PROJEKTBESCHREIBUNG: Entnimm alle relevanten Informationen aus den beigefügten Dokumenten.\n`;
+
+  const pdfHint = hasPDFs
+    ? `- Es wurden ${uploadedPDFs.length} Dokument(e) beigefügt – bitte als primäre Informationsquelle für den Scope verwenden\n`
+    : '';
+
+  const promptText = `Du bist ein erfahrener Aufwandsschätzer für das DIAMIR Produktkonzeptionsteam.
+
+⚠️ WICHTIG: Schätze AUSSCHLIESSLICH Konzeptions- und Designleistungen (Requirements, UX, UI, Design System, Usability Testing, Accessibility, Architekturkonzept, AI-Konzeption). KEINE Entwicklung, KEINE Programmierung, KEINE technische Umsetzung – diese sind NICHT Teil dieser Schätzung.
+
+${scopeSection}
+GEWÄHLTE LEISTUNGSBEREICHE MIT DETAILS:
+${selectedAreas}
+
+SCHÄTZREGELN (DIAMIR-Standard):
+- Einheit: Personentage (PT), 1 PT = 8 Stunden
+- Endwert ist oft Mittelwert aus Min/Max, kann bei bekannten Risiken abweichen
+- Jeder Bereich bekommt einen eigenen Puffer-Posten
+- Workshops sind eigene Subfeatures, nicht in Design-Aufwand eingerechnet
+- Devices (iOS, Android, Web, Desktop, Tablet) beeinflussen Aufwand stark – aus Beschreibung ableiten
+- Interviews: exakt ~3h pro Interview mit 2 PK-Personen (Vorbereitung + Durchführung + Nachbereitung) – Anzahl steht oben
+- Usability Tests: ~1,5h pro Session mit 2 PK-Personen – Anzahl steht oben
+- AI-Konzeption: 4–8 PT Richtwert
+- Beschreibungen: immer Scope-Abgrenzung nennen (was ist drin, was ist NICHT drin)
+- Schätzungen beziehen sich auf MVP-Scope, nicht Vollprodukt
+- Goodies für Interviews & Tests (ca. 30€/Person) separat als Subfeature ausweisen
+- PM-Anteil wird NICHT geschätzt – wird separat als Prozentsatz addiert
+${pdfHint}
+ANTWORTFORMAT – NUR valides JSON, kein Markdown, kein Text außerhalb:
+{
+  "blocks": [
+    {
+      "name": "Requirements Engineering",
+      "rows": [
+        {
+          "name": "Ist-Analyse & Workshops",
+          "desc": "Scope: Product & Process Insight Sessions, Prozessaufarbeitung entlang der User Journey. Nicht enthalten: technische Systemanalyse.",
+          "min": 5,
+          "max": 8,
+          "end": 6.5
+        }
+      ]
+    }
+  ],
+  "notes": "Kurze Hinweise zu Annahmen oder Unsicherheiten (max 2 Sätze)",
+  "questions": ["Offene Klärungsfrage 1", "Offene Klärungsfrage 2"]
+}
+
+Antworte NUR mit dem JSON-Objekt.`;
+
+  // Build multipart content: PDFs first, then text prompt
+  const userContent = [];
+  for (const pdf of uploadedPDFs) {
+    userContent.push({
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: pdf.base64 }
+    });
+  }
+  userContent.push({ type: 'text', text: promptText });
+
+  try {
+    const resp = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
+
+    clearInterval(thinkInterval);
+    thinking.style.display = 'none';
+
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+
+    let parsed;
+    try {
+      // Extract JSON: find first { and last }
+      const firstBrace = raw.indexOf('{');
+      const lastBrace = raw.lastIndexOf('}');
+      if (firstBrace === -1) throw new Error('Kein JSON gefunden in Antwort');
+      let jsonStr = firstBrace !== -1 && lastBrace !== -1
+        ? raw.slice(firstBrace, lastBrace + 1)
+        : raw;
+      // If the JSON appears truncated (no closing }), try to repair it
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // Attempt truncation repair: close any open arrays/objects
+        let depth = 0;
+        let inStr = false;
+        let escape = false;
+        for (const ch of jsonStr) {
+          if (escape) { escape = false; continue; }
+          if (ch === '\\' && inStr) { escape = true; continue; }
+          if (ch === '"') { inStr = !inStr; continue; }
+          if (!inStr) {
+            if (ch === '{' || ch === '[') depth++;
+            if (ch === '}' || ch === ']') depth--;
+          }
+        }
+        // Append missing closing chars
+        let repaired = jsonStr.trimEnd().replace(/,\s*$/, ''); // remove trailing comma
+        for (let i = 0; i < depth; i++) repaired += i === 0 ? ']}' : i % 2 === 1 ? ']}' : '}';
+        parsed = JSON.parse(repaired);
+      }
+    } catch (e) {
+      throw new Error('JSON-Parsing fehlgeschlagen: ' + e.message + '\n\nRohtext (Anfang): ' + raw.substring(0, 300));
+    }
+
+    showBlocks(parsed.blocks || [], parsed.notes || '', parsed.questions || []);
+
+    const proj = document.getElementById('meta-projekt').value || 'Projekt';
+    document.getElementById('panel-title').textContent = proj + ' – Schätzung';
+
+  } catch (err) {
+    clearInterval(thinkInterval);
+    thinking.style.display = 'none';
+    document.getElementById('empty-state').style.display = 'flex';
+    document.getElementById('empty-state').innerHTML = `
+      <div class="empty-icon">⚠</div>
+      <div class="empty-title">Fehler bei der Generierung</div>
+      <div class="empty-sub" style="color:#c87d4a">${err.message}</div>
+    `;
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btn-icon').style.display = 'inline';
+    document.getElementById('btn-spinner').style.display = 'none';
+    document.getElementById('btn-label').textContent = 'Neu generieren';
+    document.getElementById('add-block-btn').style.display = hasBlocks ? 'flex' : 'none';
+    document.getElementById('reset-btn').style.display = hasBlocks ? 'inline-flex' : 'none';
+  }
+}
+
+// ─── CSV EXPORT ───
+function exportCSV() {
+  const proj = document.getElementById('meta-projekt').value || 'Schätzung';
+  const kunde = document.getElementById('meta-kunde').value || '';
+  const datum = document.getElementById('meta-datum').value || '';
+
+  let csv = `DIAMIR Projektschätzung\n`;
+  csv += `Projekt;${proj}\nKunde;${kunde}\nDatum;${datum}\n\n`;
+  csv += 'Feature Block;Subfeature;Beschreibung;Min (PT);Max (PT);Endwert (PT)\n';
+
+  document.querySelectorAll('.block').forEach(block => {
+    const blockName = block.querySelector('.block-name-text').textContent.trim();
+    block.querySelectorAll('.row').forEach(row => {
+      const sub = row.querySelector('input[type=text]').value || '';
+      const desc = (row.querySelector('textarea').value || '').replace(/\n/g, ' ');
+      const min = row.querySelector('.pt-input.min').value || '';
+      const max = row.querySelector('.pt-input.max').value || '';
+      const end = row.querySelector('.pt-input.endwert').value || '';
+      csv += `"${blockName}";"${sub}";"${desc}";"${min}";"${max}";"${end}"\n`;
+    });
+  });
+
+  const netto = document.getElementById('total-netto').textContent.replace(' PT','');
+  const pm = document.getElementById('total-pm').textContent.replace(' PT','');
+  const gesamt = document.getElementById('total-gesamt').textContent.replace(' PT','');
+
+  csv += `\n;Summe netto;;;;${netto}\n`;
+  csv += `;PM-Anteil (${Math.round(pmRate*100)}%);;;;${pm}\n`;
+  csv += `;Gesamt inkl. PM;;;;${gesamt}\n`;
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `DIAMIR_${proj.replace(/\s+/g,'_')}_Schaetzung.csv`;
+  a.click();
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') generateEstimate();
+});
+
+// Init PDF drop zone
+setupPDFDrop();
+</script>
+</body>
+</html>
